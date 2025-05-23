@@ -103,11 +103,11 @@ const uiController = {
         slider.disabled = autoCheck.checked;
     },
 
-    // Video Summary Modal Functions
+    // 视频摘要模态框功能函数
     showVideoSummaryModal() {
         const modalElement = document.getElementById('videoSummaryModal');
         if (modalElement) {
-            // Ensure Bootstrap 5 modal instance is created if it doesn't exist
+            // 确保 Bootstrap 5 模态框实例已创建（如果尚不存在）
             const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
             modalInstance.show();
         }
@@ -127,7 +127,7 @@ const uiController = {
         const loadingIndicator = document.getElementById('summaryLoadingIndicator');
         const summaryContentArea = document.getElementById('summaryContentArea');
         if (loadingIndicator) loadingIndicator.style.display = 'block';
-        if (summaryContentArea) summaryContentArea.innerHTML = ''; // Clear previous summary
+        if (summaryContentArea) summaryContentArea.innerHTML = ''; // 清除之前的摘要
     },
 
     hideSummaryLoading() {

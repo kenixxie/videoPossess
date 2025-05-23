@@ -55,21 +55,21 @@ const fileController = {
             uiController.showAlert(`开始抽帧，间隔${state.frameInterval}秒，共${state.totalFrames}帧`);
             await this.extractFrames();
 
-            // Store the video path (assuming file.name is usable by the backend)
+            // 存储视频路径（假设后端可以使用 file.name）
             state.uploadedVideoPath = file.name; 
             
-            // Show the summarize button and add debugging aids
+            // 显示摘要按钮并添加调试辅助手段
             const videoActions = document.getElementById('videoActions');
             if (videoActions) {
                 console.log('Attempting to show videoActions div. Current display style:', videoActions.style.display);
                 videoActions.style.display = 'block';
-                videoActions.style.border = '2px solid red'; // Temporary red border for visual debugging
+                videoActions.style.border = '2px solid red'; // 用于视觉调试的临时红色边框
                 console.log('Set videoActions div display to block and added red border.');
                 
-                // Add a timeout to remove the border after a few seconds so it's not permanent
+                // 添加超时以便几秒钟后移除边框，使其不是永久性的
                 setTimeout(() => {
                     if (videoActions) {
-                        videoActions.style.border = ''; // Remove the border
+                        videoActions.style.border = ''; // 移除边框
                     }
                 }, 5000); // Remove border after 5 seconds
             } else {
@@ -131,7 +131,7 @@ const fileController = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // Sending only video_path, backend will use defaults for other params
+                // 仅发送 video_path，后端将对其他参数使用默认值
                 body: JSON.stringify({ video_path: state.uploadedVideoPath }), 
             });
 
@@ -155,10 +155,10 @@ const fileController = {
     }
 };
 
-// Event listener for the summarize button (using event delegation)
+// 摘要按钮的事件监听器（使用事件委托）
 document.addEventListener('DOMContentLoaded', () => {
-    // Ensure elements are loaded before trying to attach listeners if not using delegation from document
-    const dropZone = document.getElementById('dropZone'); // Or any static parent of #videoActions
+    // 如果不使用 document 的事件委托，请确保在尝试附加监听器之前元素已加载
+    const dropZone = document.getElementById('dropZone'); // 或 #videoActions 的任何静态父元素
     if (dropZone) {
         dropZone.addEventListener('click', function(event) {
             if (event.target.closest('.summarize-video-btn')) {
@@ -166,8 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     } else {
-        // Fallback to document if dropZone is not found immediately,
-        // though specific delegation is better.
+        // 如果未能立即找到 dropZone，则回退到 document，
+        // 尽管特定的委托方式更好。
         document.addEventListener('click', function(event) {
             if (event.target.closest('.summarize-video-btn')) {
                 fileController.handleSummarizeVideoClick();

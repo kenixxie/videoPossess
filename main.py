@@ -1451,22 +1451,22 @@ class ModelProcessor:
     @staticmethod
     async def summarize_video_with_gemini(image_data_list: List[str], prompt: str, targets: List[str] = None):
         """
-        Summarizes a video using Google Gemini API with multiple frames.
-        Args:
-            image_data_list: A list of base64 encoded image strings.
-            prompt: The summarization prompt.
-            targets: Not directly used for summarization but kept for compatibility with format_api_response.
-        Returns:
-            A dictionary containing the summary or an error message.
+        使用 Google Gemini API 通过多帧图像对视频进行摘要。
+        参数:
+            image_data_list: base64 编码的图像字符串列表。
+            prompt: 摘要提示。
+            targets: 不直接用于摘要，但为与 format_api_response 兼容而保留。
+        返回:
+            包含摘要或错误消息的字典。
         """
         try:
             gemini_config = MODELS["gemini"]
             api_key = gemini_config["api_key"]
-            model_name_config = gemini_config.get("name", "gemini-2.0-flash-exp") # Ensure this is a vision-capable model
-            # It's better to use a model specifically fine-tuned or known for multi-image understanding if available.
-            # For now, we use the configured vision model.
+            model_name_config = gemini_config.get("name", "gemini-2.0-flash-exp") # 确保这是一个具备视觉能力的模型
+            # 如果有专门为多图像理解微调或知名的模型，使用该模型更佳。
+            # 目前，我们使用配置的视觉模型。
             proxy = GEMINI_CONFIG.get("proxy", {})
-            start_time = time.time() # For logging API call duration
+            start_time = time.time() # 用于记录API调用时长
 
             logger.info(f"开始调用Gemini API进行视频摘要，帧数: {len(image_data_list)}")
 
@@ -1489,29 +1489,29 @@ class ModelProcessor:
                     model = genai.GenerativeModel(model_instance_name)
 
                     generation_config = {
-                        "temperature": gemini_config.get("temperature", 0.5), # May need different temp for summarization
+                        "temperature": gemini_config.get("temperature", 0.5), # 摘要功能可能需要不同的temperature参数
                         "top_p": gemini_config.get("top_p", 0.8),
                         "top_k": gemini_config.get("top_k", 40),
-                        "max_output_tokens": gemini_config.get("max_output_tokens_summarization", 4096) # Potentially longer summaries
+                        "max_output_tokens": gemini_config.get("max_output_tokens_summarization", 4096) # 可能产生更长的摘要
                     }
 
-                    # Prepare image parts
+                    # 准备图像内容部分
                     image_parts = []
                     for b64_image_string in image_data_list:
                         image_bytes = base64.b64decode(b64_image_string)
                         image_parts.append({'mime_type': 'image/jpeg', 'data': image_bytes})
                     
-                    # Construct the full prompt for the API call
-                    # The prompt should be the first element, followed by all image parts
+                    # 构建完整的API调用提示
+                    # prompt应为第一个元素，其后跟随所有图像部分
                     full_prompt_parts = [prompt] + image_parts
                     
-                    # Log the size of the request payload (first few parts for brevity)
+                    # 记录请求负载的大小（为简洁起见，只记录开头部分）
                     logger.debug(f"Gemini summarization request: prompt='{prompt[:100]}...', num_images={len(image_parts)}")
 
                     response = model.generate_content(
                         full_prompt_parts,
                         generation_config=generation_config,
-                        # Consider adding request_options for timeout if needed
+                        # 如果需要，考虑添加请求超时选项
                     )
                     
                     if hasattr(response, 'text'):
@@ -1549,7 +1549,7 @@ class ModelProcessor:
             traceback_info = traceback.format_exc()
             logger.debug(f"调用Gemini视频摘要出错详细信息: {traceback_info}")
             return {
-                "message": f"Gemini API error during summarization: {str(api_error)}",
+                "message": f"Gemini API在摘要过程中出错: {str(api_error)}",
                 "model": "gemini",
                 "status": "error",
                 "timestamp": time.time()
@@ -1850,77 +1850,77 @@ class VideoSummarizationRequest(BaseModel):
 @api_error_handler(status_code=500)
 async def summarize_video(request: VideoSummarizationRequest):
     """
-    Summarizes a video using Gemini API.
-    Extracts frames from the video, sends them to Gemini for summarization.
+    使用 Gemini API 对视频进行摘要。
+    从视频中提取帧，并将它们发送给 Gemini 进行摘要处理。
     """
     video_path = request.video_path
     extraction_interval = request.extraction_interval_seconds
     max_frames_to_process = request.max_frames
 
-    # --- 1. Validate video_path (basic check) ---
+    # --- 1. 验证视频路径 (基本检查) ---
     if not os.path.exists(video_path):
-        logger.error(f"Video file not found at path: {video_path}")
+        logger.error(f"视频文件未找到: {video_path}") # Chinese translation
         return create_api_response(
             status="error",
-            message=f"Video file not found: {video_path}",
+            message=f"视频文件未找到: {video_path}", # Chinese translation
             status_code=404
         )
     if not os.path.isfile(video_path):
-        logger.error(f"Path is not a file: {video_path}")
+        logger.error(f"路径不是一个文件: {video_path}") # Chinese translation
         return create_api_response(
             status="error",
-            message=f"Path is not a file: {video_path}",
+            message=f"路径不是一个文件: {video_path}", # Chinese translation
             status_code=400
         )
 
-    logger.info(f"Starting video summarization for: {video_path} with interval {extraction_interval}s, max_frames {max_frames_to_process}")
+    logger.info(f"开始视频摘要处理：{video_path}，提取间隔 {extraction_interval}秒，最大帧数 {max_frames_to_process}") # Chinese translation
 
     extracted_frames_base64 = []
     frames_processed_count = 0
 
     try:
-        # --- 2. Video Frame Extraction Logic ---
+        # --- 2. 视频帧提取逻辑 ---
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            logger.error(f"Could not open video file: {video_path}")
-            return create_api_response(status="error", message="Could not open video file.", status_code=500)
+            logger.error(f"无法打开视频文件: {video_path}") # Chinese translation
+            return create_api_response(status="error", message="无法打开视频文件。", status_code=500) # Chinese translation
 
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration_seconds = total_frames / fps if fps > 0 else 0
-        logger.info(f"Video Info: FPS={fps}, Total Frames={total_frames}, Duration={duration_seconds:.2f}s")
+        logger.info(f"视频信息：FPS={fps}，总帧数={total_frames}，时长={duration_seconds:.2f}秒") # Chinese translation
 
         if duration_seconds == 0:
             cap.release()
-            logger.error(f"Video duration is zero or FPS is invalid: {video_path}")
-            return create_api_response(status="error", message="Video duration is zero or FPS is invalid.", status_code=400)
+            logger.error(f"视频时长为零或FPS无效: {video_path}") # Chinese translation
+            return create_api_response(status="error", message="视频时长为零或FPS无效。", status_code=400) # Chinese translation
 
         frame_indices_to_extract = []
         current_time_sec = 0
         while current_time_sec <= duration_seconds:
             frame_indices_to_extract.append(int(current_time_sec * fps))
             current_time_sec += extraction_interval
-            if len(frame_indices_to_extract) >= 500: # Safety break for very long videos / small intervals
-                logger.warning("Reached safety limit of 500 potential frames to extract. Breaking.")
+            if len(frame_indices_to_extract) >= 500: # 针对超长视频/过小提取间隔的安全中断机制
+                logger.warning("已达到500帧的潜在提取上限，停止提取。") # Chinese translation
                 break
         
-        # Adjust frame selection if over max_frames_to_process
+        # 如果提取的帧数超过处理上限，则调整帧选择
         if len(frame_indices_to_extract) > max_frames_to_process:
-            logger.info(f"Extracted {len(frame_indices_to_extract)} frames, which is more than max_frames {max_frames_to_process}. Selecting a subset.")
+            logger.info(f"提取了 {len(frame_indices_to_extract)} 帧，超过了最大帧数 {max_frames_to_process}。正在选择子集。") # Chinese translation
             step = len(frame_indices_to_extract) / max_frames_to_process
             selected_indices = [frame_indices_to_extract[int(i * step)] for i in range(max_frames_to_process)]
             frame_indices_to_extract = selected_indices
 
-        logger.info(f"Will attempt to extract {len(frame_indices_to_extract)} frames at indices: {frame_indices_to_extract[:5]}...")
+        logger.info(f"将尝试在索引位置提取 {len(frame_indices_to_extract)} 帧：{frame_indices_to_extract[:5]}...") # Chinese translation
 
         for frame_idx in frame_indices_to_extract:
-            if frame_idx >= total_frames: # Ensure index is within bounds
+            if frame_idx >= total_frames: # 确保索引在边界内
                 continue
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
             ret, frame = cap.read()
             if ret:
-                # Resize frame for consistency and to reduce data size (optional, but good practice)
-                # Example: resize to width 640, keeping aspect ratio
+                # 调整帧大小以保证一致性并减少数据量（可选，但建议这样做）
+                # 示例：调整宽度至640，保持宽高比
                 h, w, _ = frame.shape
                 target_w = 640
                 target_h = int(h * (target_w / w))
@@ -1930,49 +1930,49 @@ async def summarize_video(request: VideoSummarizationRequest):
                 if success:
                     extracted_frames_base64.append(base64.b64encode(buffer).decode('utf-8'))
                 else:
-                    logger.warning(f"Failed to encode frame at index {frame_idx}")
+                    logger.warning(f"索引 {frame_idx} 处的帧编码失败。") # Chinese translation
             else:
-                logger.warning(f"Failed to read frame at index {frame_idx}")
+                logger.warning(f"索引 {frame_idx} 处的帧读取失败。") # Chinese translation
         
         frames_processed_count = len(extracted_frames_base64)
         cap.release()
-        logger.info(f"Successfully extracted {frames_processed_count} frames from the video.")
+        logger.info(f"成功从视频中提取了 {frames_processed_count} 帧。") # Chinese translation
 
         if not extracted_frames_base64:
-            return create_api_response(status="error", message="No frames could be extracted from the video.", status_code=500)
+            return create_api_response(status="error", message="未能从视频中提取任何帧。", status_code=500) # Chinese translation
 
-        # --- 3. Model Interaction for Summarization (Placeholder for now) ---
-        # This will be replaced by a call to ModelProcessor.summarize_with_gemini
-        # For now, a dummy summary:
-        # summary_text = f"Video processed. Extracted {frames_processed_count} frames."
+        # --- 3. 模型交互以进行摘要 (目前为占位符) ---
+        # 这部分将被对 ModelProcessor.summarize_video_with_gemini 的调用所取代
+        # 目前，一个虚拟摘要：
+        # summary_text = f"视频已处理。提取了 {frames_processed_count} 帧。"
         
-        # --- Call ModelProcessor for summarization ---
+        # --- 调用 ModelProcessor 进行摘要 ---
         summarization_prompt = (
-            "You will be provided with a sequence of frames from a video. "
-            "Please generate a concise textual summary of the key events, scenes, and objects depicted in these frames. "
-            "Focus on the overall narrative or main activities if possible. Aim for a summary of about 3-5 sentences."
+            "你将收到一系列视频帧。"
+            "请对这些帧中描述的关键事件、场景和对象生成一个简洁的文本摘要。"
+            "如果可能，请侧重于整体叙事或主要活动。目标是生成大约3-5句话的摘要。" # More natural Chinese prompt
         )
         
-        # Assuming ModelProcessor will have a method `summarize_with_gemini`
-        # This method needs to be implemented next.
+        # 假设 ModelProcessor 将有一个 summarize_video_with_gemini 方法
+        # 这个方法需要接下来实现.
         summary_result = await ModelProcessor.summarize_video_with_gemini(
             image_data_list=extracted_frames_base64,
             prompt=summarization_prompt,
-            targets=[] # Not used for summarization but might be part of a generic signature
+            targets=[] # 不用于摘要，但可能是一个通用签名的一部分
         )
 
         if summary_result.get("status") == "error":
              return create_api_response(
                 status="error",
-                message=summary_result.get("message", "Summarization failed"),
+                message=summary_result.get("message", "摘要处理失败"), # Chinese translation
                 model_used="gemini",
                 frames_processed=frames_processed_count,
                 status_code=500
             )
 
-        summary_text = summary_result.get("summary", "No summary generated.")
+        summary_text = summary_result.get("summary", "未能生成摘要内容。") # Chinese translation
 
-        # --- 4. Return Response ---
+        # --- 4. 返回响应 ---
         return create_api_response(
             status="success",
             summary=summary_text,
@@ -1981,13 +1981,13 @@ async def summarize_video(request: VideoSummarizationRequest):
         )
 
     except cv2.error as e:
-        logger.error(f"OpenCV error during video processing: {str(e)}")
+        logger.error(f"视频处理过程中发生OpenCV错误: {str(e)}") # Chinese translation
         traceback.print_exc()
-        return create_api_response(status="error", message=f"OpenCV error: {str(e)}", status_code=500)
+        return create_api_response(status="error", message=f"OpenCV错误: {str(e)}", status_code=500) # Chinese translation
     except Exception as e:
-        logger.error(f"An unexpected error occurred during video summarization: {str(e)}")
+        logger.error(f"视频摘要过程中发生意外错误: {str(e)}") # Chinese translation
         traceback.print_exc()
-        return create_api_response(status="error", message=f"An unexpected error occurred: {str(e)}", status_code=500)
+        return create_api_response(status="error", message=f"发生意外错误: {str(e)}", status_code=500) # Chinese translation
 
 
 if __name__ == "__main__":

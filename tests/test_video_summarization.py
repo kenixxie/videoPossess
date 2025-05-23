@@ -5,8 +5,8 @@ import os
 import base64
 import sys
 
-# Add project root to sys.path if tests are run from tests/ directory
-# This ensures 'main' can be imported
+# 如果测试从 tests/ 目录运行，则将项目根目录添加到 sys.path
+# 这确保 'main' 可以被导入
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from main import app, ModelProcessor
@@ -19,23 +19,23 @@ INVALID_FILE_PATH = os.path.join(TEST_SAMPLES_DIR, "invalid_file.txt")
 def manage_test_files():
     os.makedirs(TEST_SAMPLES_DIR, exist_ok=True)
 
-    # Check if sample_video.mp4 was created by the bash command in the previous step
-    # If not, this fixture won't attempt to recreate it here as per instructions.
-    # The ffmpeg command should have already run.
+    # 检查 sample_video.mp4 是否已由前一步的 bash 命令创建
+    # 如果没有，此 fixture 不会按照指示尝试在此处重新创建它。
+    # ffmpeg 命令应该已经运行过了。
 
     with open(INVALID_FILE_PATH, "w") as f:
         f.write("This is not a video.")
     
     yield 
 
-    # Clean up sample files after test session
-    # sample_video.mp4 is managed by the run_in_bash_session call, so only remove invalid_file.txt
+    # 测试会话结束后清理示例文件。
+    # sample_video.mp4 由 run_in_bash_session 调用管理，因此仅移除 invalid_file.txt
     if os.path.exists(INVALID_FILE_PATH):
         os.remove(INVALID_FILE_PATH)
     
-    # Attempt to remove TEST_SAMPLES_DIR only if it's empty AND it's not the one created by ffmpeg directly
-    # For simplicity, and given the previous step created the video, we'll leave the dir
-    # if it contains the video. If it's empty after removing invalid_file.txt, try to remove.
+    # 仅当 TEST_SAMPLES_DIR 为空且不是由 ffmpeg 直接创建时，才尝试移除它
+    # 为简单起见，并考虑到前一步已创建视频，我们将保留该目录
+    # 如果它包含视频。如果在移除 invalid_file.txt 后为空，则尝试移除。
     if os.path.exists(TEST_SAMPLES_DIR) and not os.listdir(TEST_SAMPLES_DIR):
         try:
             os.rmdir(TEST_SAMPLES_DIR)
@@ -53,17 +53,17 @@ async def test_summarize_video_with_gemini_success():
     mock_gemini_response_obj = MagicMock()
     mock_gemini_response_obj.text = "This is a mocked summary."
     
-    # Mock the return value of the inner function run_gemini_summarization_api
-    # which is called by run_in_thread
+    # 模拟内部函数 run_gemini_summarization_api 的返回值
+    # 该函数由 run_in_thread 调用
     async def mock_run_in_thread_function(func, *args, **kwargs):
-        # Directly return the desired mock response, simulating the behavior 
-        # of the `run_gemini_summarization_api` when called within `run_in_thread`.
+        # 直接返回期望的模拟响应，模拟其行为 
+        # 当在 run_in_thread 中调用 run_gemini_summarization_api 时的行为。
         return mock_gemini_response_obj.text 
 
     with patch('main.run_in_thread', new=mock_run_in_thread_function):
         dummy_frames = ["base64image1", "base64image2"]
         prompt = "Summarize these frames."
-        # The actual ModelProcessor.summarize_video_with_gemini returns a dict
+        # 实际的 ModelProcessor.summarize_video_with_gemini 返回一个字典
         result_dict = await ModelProcessor.summarize_video_with_gemini(dummy_frames, prompt)
         assert result_dict["status"] == "success"
         assert result_dict["summary"] == "This is a mocked summary."
@@ -87,11 +87,11 @@ def test_summarize_api_success(client):
     if not os.path.exists(SAMPLE_VIDEO_PATH) or os.path.getsize(SAMPLE_VIDEO_PATH) < 100: 
         pytest.skip("Valid sample video not available or too small. FFMPEG step might have failed or produced an invalid file.")
 
-    # Mock the ModelProcessor.summarize_video_with_gemini method
+    # 模拟 ModelProcessor.summarize_video_with_gemini 方法
     mock_summary_response = {
         "status": "success",
         "summary": "Mocked video summary from API test.",
-        "model": "gemini", # Ensure this matches what ModelProcessor would return
+        "model": "gemini", # 确保这与 ModelProcessor 会返回的内容相匹配
         "timestamp": 12345
     }
     with patch('main.ModelProcessor.summarize_video_with_gemini', return_value=mock_summary_response) as mock_summarize:
@@ -103,8 +103,8 @@ def test_summarize_api_success(client):
         assert data["summary"] == "Mocked video summary from API test."
         assert data["model_used"] == "gemini" 
         assert "frames_processed" in data
-        # The sample video is 3 seconds long, default interval is 5s.
-        # Frame extraction logic: 0s. So 1 frame expected.
+        # 示例视频时长3秒，默认间隔5秒。
+        # 帧提取逻辑：0秒。因此预期1帧。
         assert data["frames_processed"] >= 1, f"Expected at least 1 frame, got {data['frames_processed']}"
         mock_summarize.assert_called_once()
 
@@ -119,12 +119,12 @@ def test_summarize_api_video_not_found(client):
 
 def test_summarize_api_invalid_video_file(client):
     response = client.post("/api/video/summarize", json={"video_path": INVALID_FILE_PATH})
-    # Expecting 500 because cv2.VideoCapture likely fails and might not be caught as a specific client error.
-    # Or 400 if specific checks for video properties (like duration 0) are hit first.
+    # 预期500错误，因为 cv2.VideoCapture 可能会失败，并且可能不会作为特定的客户端错误被捕获。
+    # 或者如果首先触发了对视频属性（如时长为0）的特定检查，则为400错误。
     assert response.status_code in [400, 500] 
     data = response.json()
     assert data["status"] == "error"
-    # Check for messages that might come from cv2 errors or duration checks
+    # 检查可能来自cv2错误或时长检查的消息
     possible_messages = ["Could not open video file", "Video duration is zero or FPS is invalid"]
     assert any(msg in data["message"] for msg in possible_messages)
 
@@ -133,7 +133,7 @@ def test_summarize_api_gemini_call_error(client):
     if not os.path.exists(SAMPLE_VIDEO_PATH) or os.path.getsize(SAMPLE_VIDEO_PATH) < 100:
         pytest.skip("Valid sample video not available or too small. FFMPEG step might have failed.")
 
-    # Mock ModelProcessor.summarize_video_with_gemini to return an error structure
+    # 模拟 ModelProcessor.summarize_video_with_gemini 以返回一个错误结构
     mock_error_response = {
         "status": "error",
         "message": "Simulated Gemini Error from ModelProcessor",
@@ -141,30 +141,30 @@ def test_summarize_api_gemini_call_error(client):
     }
     with patch('main.ModelProcessor.summarize_video_with_gemini', return_value=mock_error_response) as mock_summarize_error:
         response = client.post("/api/video/summarize", json={"video_path": SAMPLE_VIDEO_PATH})
-        # The endpoint itself should still succeed in calling the (mocked) ModelProcessor
-        # The error is from the *logic* of summarization, not an unhandled API exception in this case
-        assert response.status_code == 500 # The endpoint should return 500 if the summarization failed
+        # 端点本身应该仍然能够成功调用（模拟的）ModelProcessor
+        # 这个错误来自于摘要的*逻辑*，而不是此情况下的未处理API异常
+        assert response.status_code == 500 # 如果摘要失败，端点应返回500
         data = response.json()
         assert data["status"] == "error"
         assert data["message"] == "Simulated Gemini Error from ModelProcessor"
         mock_summarize_error.assert_called_once()
 
 def test_summarize_api_missing_video_path(client):
-    response = client.post("/api/video/summarize", json={}) # Missing video_path
-    assert response.status_code == 422 # FastAPI's unprocessable entity for missing fields
+    response = client.post("/api/video/summarize", json={}) # 缺少 video_path
+    assert response.status_code == 422 # FastAPI 针对缺失字段返回的不可处理实体错误
     data = response.json()
     assert "detail" in data
     assert any(d["msg"] == "Field required" and d["loc"] == ["body", "video_path"] for d in data["detail"])
 
 def test_summarize_api_empty_video_path(client):
     response = client.post("/api/video/summarize", json={"video_path": ""})
-    # This will likely be caught by the os.path.exists check.
+    # 这很可能会被 os.path.exists 检查捕获。
     assert response.status_code == 404
     data = response.json()
     assert data["status"] == "error"
     assert "Video file not found" in data["message"]
 
-# Example test for frame extraction parameters
+# 帧提取参数的示例测试
 def test_summarize_api_custom_extraction_params(client):
     if not os.path.exists(SAMPLE_VIDEO_PATH) or os.path.getsize(SAMPLE_VIDEO_PATH) < 100:
         pytest.skip("Valid sample video not available. FFMPEG step might have failed.")
@@ -176,9 +176,9 @@ def test_summarize_api_custom_extraction_params(client):
         "timestamp": 12345
     }
     with patch('main.ModelProcessor.summarize_video_with_gemini', return_value=mock_summary_response) as mock_summarize:
-        # Sample video is 3s. Interval 1s should give 3 frames (0s, 1s, 2s). Max frames 2.
-        # Frame indices: [0, 10, 20] (for 10fps video)
-        # Selected due to max_frames=2: [0, 20] -> 2 frames
+        # 示例视频3秒。间隔1秒应产生3帧（0秒, 1秒, 2秒）。最大帧数2。
+        # 帧索引: [0, 10, 20] (对于10fps的视频)
+        # 由于 max_frames=2 而选择: [0, 20] -> 2帧
         response = client.post("/api/video/summarize", json={
             "video_path": SAMPLE_VIDEO_PATH,
             "extraction_interval_seconds": 1,
@@ -188,5 +188,5 @@ def test_summarize_api_custom_extraction_params(client):
         data = response.json()
         assert data["status"] == "success"
         assert data["summary"] == "Custom params summary."
-        assert data["frames_processed"] == 2 # Expect 2 frames due to max_frames
+        assert data["frames_processed"] == 2 # 由于 max_frames 的设置，预期2帧
         mock_summarize.assert_called_once()

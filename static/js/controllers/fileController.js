@@ -58,13 +58,25 @@ const fileController = {
             // Store the video path (assuming file.name is usable by the backend)
             state.uploadedVideoPath = file.name; 
             
-            // Show the summarize button
+            // Show the summarize button and add debugging aids
             const videoActions = document.getElementById('videoActions');
             if (videoActions) {
+                console.log('Attempting to show videoActions div. Current display style:', videoActions.style.display);
                 videoActions.style.display = 'block';
+                videoActions.style.border = '2px solid red'; // Temporary red border for visual debugging
+                console.log('Set videoActions div display to block and added red border.');
+                
+                // Add a timeout to remove the border after a few seconds so it's not permanent
+                setTimeout(() => {
+                    if (videoActions) {
+                        videoActions.style.border = ''; // Remove the border
+                    }
+                }, 5000); // Remove border after 5 seconds
+            } else {
+                console.error('Error: videoActions div not found in the DOM.');
             }
             
-        } catch (error) {
+        } catch (error)
             console.error('初始化抽帧时出错:', error);
             uiController.showAlert('初始化抽帧时出错', 'error');
         }
